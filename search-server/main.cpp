@@ -60,9 +60,9 @@ public:
 
     void AddDocument(int document_id, const string& document) {
         const vector<string> words = SplitIntoWordsNoStop(document);
-        int size = words.size();
+        const double tf_one_word = 1.0 / words.size();
         for (const string& word : words) {
-            index_[word][document_id] += 1.0 / size;
+            index_[word][document_id] += tf_one_word;
         }
         ++document_count_;
     }
@@ -123,8 +123,9 @@ private:
         map<int, double> matched_index;
         for (const string& plus_word : query.words) {
             if (index_.find(plus_word) != index_.end()) {
+                const double idf = log((double)document_count_ / index_.at(plus_word).size());
                 for (const auto& [id, tf] : index_.at(plus_word)) {
-                    matched_index[id] += tf * log((double)document_count_ / index_.at(plus_word).size());
+                    matched_index[id] += tf * idf;
                 }
             }
         }
