@@ -17,6 +17,12 @@ string ReadLine() {
     return s;
 }
 
+int ReadInt() {
+    int i;
+    cin >> i;
+    return i;
+}
+
 int ReadLineWithNumber() {
     int result = 0;
     cin >> result;
@@ -48,6 +54,7 @@ vector<string> SplitIntoWords(const string& text) {
 struct Document {
     int id;
     double relevance;
+    int rating;
 };
 
 class SearchServer {
@@ -58,12 +65,15 @@ public:
         }
     }
 
-    void AddDocument(int document_id, const string& document) {
+    void AddDocument(int document_id, const string& document, const vector<int>& ratings) {
         const vector<string> words = SplitIntoWordsNoStop(document);
         const double tf_one_word = 1.0 / words.size();
         for (const string& word : words) {
             index_[word][document_id] += tf_one_word;
         }
+
+        document_ratings_[document_id] = ComputeAverageRating(ratings);
+
         ++document_count_;
     }
 
@@ -88,6 +98,7 @@ private:
     };
 
     map<string, map<int, double>> index_;
+    map<int, int> document_ratings_;
     int document_count_ = 0;
 
     set<string> stop_words_;
@@ -140,9 +151,24 @@ private:
 
         vector<Document> matched_documents;
         for (const auto& [id, relevance] : matched_index) {
-            matched_documents.push_back({ id, relevance });
+            int rating = document_ratings_.at(id);
+            matched_documents.push_back({ id, relevance, rating });
         }
         return matched_documents;
+    }
+
+    static int ComputeAverageRating(const vector<int>& ratings) {
+        int sum = 0;
+        for (const int& rating : ratings) {
+            sum += rating;
+        }
+
+        if (!ratings.empty()) {
+            return sum / (int)ratings.size();
+        }
+        else {
+            return 0;
+        }
     }
 };
 
@@ -152,7 +178,17 @@ SearchServer CreateSearchServer() {
 
     const int document_count = ReadLineWithNumber();
     for (int document_id = 0; document_id < document_count; ++document_id) {
-        search_server.AddDocument(document_id, ReadLine());
+        const string document_text = ReadLine();
+        
+        const int ratings_count = ReadInt();
+        vector<int> ratings(ratings_count, 0);
+        for (int& rating : ratings) {
+            rating = ReadInt();
+        }
+
+        ReadLine(); //Если не прочитать строку, то последующий ввод прочитан не будет.
+
+        search_server.AddDocument(document_id, document_text, ratings);
     }
 
     return search_server;
@@ -162,8 +198,11 @@ int main() {
     const SearchServer search_server = CreateSearchServer();
 
     const string query = ReadLine();
-    for (const auto& [document_id, relevance] : search_server.FindTopDocuments(query)) {
-        cout << "{ document_id = "s << document_id << ", "
-            << "relevance = "s << relevance << " }"s << endl;
+    for (const auto& [document_id, relevance, rating] : search_server.FindTopDocuments(query)) {
+        cout << "{ "s
+             << "document_id = "s << document_id << ", "s
+             << "relevance = "s << relevance << ", "s
+             << "rating = "s << rating
+             << " }"s << endl;
     }
 }
