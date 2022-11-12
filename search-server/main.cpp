@@ -134,7 +134,7 @@ private:
         map<int, double> matched_index;
         for (const string& plus_word : query.words) {
             if (index_.find(plus_word) != index_.end()) {
-                const double idf = log((double)document_count_ / index_.at(plus_word).size());
+                const double idf = log(static_cast<double>(document_count_) / index_.at(plus_word).size());
                 for (const auto& [id, tf] : index_.at(plus_word)) {
                     matched_index[id] += tf * idf;
                 }
@@ -164,7 +164,7 @@ private:
         }
 
         if (!ratings.empty()) {
-            return sum / (int)ratings.size();
+            return sum / static_cast<int>(ratings.size());
         }
         else {
             return 0;
