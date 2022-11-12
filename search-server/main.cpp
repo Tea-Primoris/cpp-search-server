@@ -1,26 +1,26 @@
 #include <algorithm>
+#include <cmath>
 #include <iostream>
-#include <set>
 #include <map>
+#include <set>
 #include <string>
 #include <utility>
 #include <vector>
-#include <cmath>
 
 using namespace std;
 
 const int MAX_RESULT_DOCUMENT_COUNT = 5;
 
 string ReadLine() {
-    string s;
-    getline(cin, s);
-    return s;
+    string str;
+    getline(cin, str);
+    return str;
 }
 
 int ReadInt() {
-    int i;
-    cin >> i;
-    return i;
+    int result = 0;
+    cin >> result;
+    return result;
 }
 
 int ReadLineWithNumber() {
@@ -44,6 +44,7 @@ vector<string> SplitIntoWords(const string& text) {
             word += c;
         }
     }
+
     if (!word.empty()) {
         words.push_back(word);
     }
@@ -71,10 +72,7 @@ public:
         for (const string& word : words) {
             index_[word][document_id] += tf_one_word;
         }
-
-        document_ratings_[document_id] = ComputeAverageRating(ratings);
-
-        ++document_count_;
+        document_ratings_.emplace(document_id, ComputeAverageRating(ratings));
     }
 
     vector<Document> FindTopDocuments(const string& raw_query) const {
@@ -92,16 +90,9 @@ public:
     }
 
 private:
-    struct Query {
-        set<string> words;
-        set<string> minus_words;
-    };
-
+    set<string> stop_words_;
     map<string, map<int, double>> index_;
     map<int, int> document_ratings_;
-    int document_count_ = 0;
-
-    set<string> stop_words_;
 
     bool IsStopWord(const string& word) const {
         return stop_words_.count(word) > 0;
@@ -117,6 +108,24 @@ private:
         return words;
     }
 
+    static int ComputeAverageRating(const vector<int>& ratings) {
+        int rating_sum = 0;
+        for (const int rating : ratings) {
+            rating_sum += rating;
+        }
+
+        if (!ratings.empty()) {
+            return rating_sum / static_cast<int>(ratings.size());
+        }
+
+        return 0;
+    }
+
+    struct Query {
+        set<string> words;
+        set<string> minus_words;
+    };
+
     Query ParseQuery(const string& text) const {
         Query query;
         for (const string& word : SplitIntoWordsNoStop(text)) {
@@ -130,14 +139,18 @@ private:
         return query;
     }
 
+    double ComputeWordInverseDocumentFreq(const string& word) const {
+        return log(static_cast<double>(document_ratings_.size()) / index_.at(word).size());
+    }
+
     vector<Document> FindAllDocuments(const Query& query) const {
         map<int, double> matched_index;
         for (const string& plus_word : query.words) {
             if (index_.find(plus_word) != index_.end()) {
-                const double idf = log(static_cast<double>(document_count_) / index_.at(plus_word).size());
+                const double idf = ComputeWordInverseDocumentFreq(plus_word);
                 for (const auto& [id, tf] : index_.at(plus_word)) {
                     matched_index[id] += tf * idf;
-                }
+            }
             }
         }
 
@@ -145,30 +158,16 @@ private:
             if (index_.find(minus_word) != index_.end()) {
                 for (const auto& [id, tf] : index_.at(minus_word)) {
                     matched_index.erase(id);
-                }
+            }
             }
         }
 
         vector<Document> matched_documents;
         for (const auto& [id, relevance] : matched_index) {
-            int rating = document_ratings_.at(id);
+            const int rating = document_ratings_.at(id);
             matched_documents.push_back({ id, relevance, rating });
         }
         return matched_documents;
-    }
-
-    static int ComputeAverageRating(const vector<int>& ratings) {
-        int sum = 0;
-        for (const int& rating : ratings) {
-            sum += rating;
-        }
-
-        if (!ratings.empty()) {
-            return sum / static_cast<int>(ratings.size());
-        }
-        else {
-            return 0;
-        }
     }
 };
 
@@ -179,7 +178,7 @@ SearchServer CreateSearchServer() {
     const int document_count = ReadLineWithNumber();
     for (int document_id = 0; document_id < document_count; ++document_id) {
         const string document_text = ReadLine();
-        
+
         const int ratings_count = ReadInt();
         vector<int> ratings(ratings_count, 0);
         for (int& rating : ratings) {
