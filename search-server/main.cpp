@@ -99,6 +99,21 @@ public:
         return matched_documents;
     }
 
+    vector<Document> FindTopDocuments(const string& raw_query, const DocumentStatus& status) const {
+        const Query query = ParseQuery(raw_query);
+        auto matched_documents = FindAllDocuments(query, status);
+        const double EPSILON = 1e-6;
+
+        sort(matched_documents.begin(), matched_documents.end(),
+            [&EPSILON](const Document& lhs, const Document& rhs) {
+                return ((abs(lhs.relevance - rhs.relevance) < EPSILON) && lhs.rating > rhs.rating) || (lhs.relevance > rhs.relevance);
+            });
+        if (matched_documents.size() > MAX_RESULT_DOCUMENT_COUNT) {
+            matched_documents.resize(MAX_RESULT_DOCUMENT_COUNT);
+        }
+        return matched_documents;
+    }
+
     vector<Document> FindTopDocuments(const string& raw_query) const {
         return FindTopDocuments(raw_query, [](int document_id, DocumentStatus status, int rating) { return status == DocumentStatus::ACTUAL; });
     }
@@ -214,6 +229,35 @@ private:
         }
         return matched_documents;
     }
+
+    vector<Document> FindAllDocuments(const Query& query, const DocumentStatus& status) const {
+        map<int, double> matched_index;
+        for (const string& plus_word : query.words) {
+            if (index_.find(plus_word) != index_.end()) {
+                const double idf = ComputeWordInverseDocumentFreq(plus_word);
+                for (const auto& [id, tf] : index_.at(plus_word)) {
+                    matched_index[id] += tf * idf;
+                }
+            }
+        }
+
+        for (const string& minus_word : query.minus_words) {
+            if (index_.find(minus_word) != index_.end()) {
+                for (const auto& [id, tf] : index_.at(minus_word)) {
+                    matched_index.erase(id);
+                }
+            }
+        }
+
+        vector<Document> matched_documents;
+        for (const auto& [id, relevance] : matched_index) {
+            if (document_statuses_.at(id) == status) {
+                const int rating = document_ratings_.at(id);
+                matched_documents.push_back({ id, relevance, rating });
+            }
+        }
+        return matched_documents;
+    }
 };
 
 void PrintDocument(const Document& document) {
@@ -223,6 +267,7 @@ void PrintDocument(const Document& document) {
         << "rating = "s << document.rating
         << " }"s << endl;
 }
+
 int main() {
     SearchServer search_server;
     search_server.SetStopWords("и в на"s);
@@ -234,8 +279,8 @@ int main() {
     for (const Document& document : search_server.FindTopDocuments("пушистый ухоженный кот"s)) {
         PrintDocument(document);
     }
-    cout << "ACTUAL:"s << endl;
-    for (const Document& document : search_server.FindTopDocuments("пушистый ухоженный кот"s, [](int document_id, DocumentStatus status, int rating) { return status == DocumentStatus::ACTUAL; })) {
+    cout << "BANNED:"s << endl;
+    for (const Document& document : search_server.FindTopDocuments("пушистый ухоженный кот"s, DocumentStatus::BANNED)) {
         PrintDocument(document);
     }
     cout << "Even ids:"s << endl;
