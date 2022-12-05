@@ -206,7 +206,7 @@ private:
 
         vector<Document> matched_documents;
         for (const auto& [id, relevance] : matched_index) {
-            const DocumentInfo document_info = documents_info_.at(id);
+            const DocumentInfo& document_info = documents_info_.at(id);
             if (filter(id, document_info.status, document_info.rating)) {
                 matched_documents.push_back({ id, relevance, document_info.rating });
             }
