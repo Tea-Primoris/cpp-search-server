@@ -13,6 +13,14 @@ using namespace std;
 
 const int MAX_RESULT_DOCUMENT_COUNT = 5;
 
+ostream& operator<<(ostream& os, const set<string>& set)
+{
+    for (const string& item : set) {
+        os << item;
+    }
+    return os;
+}
+
 template <typename T>
 void RunTestImpl(T func, string func_name) {
     func();
@@ -107,9 +115,17 @@ enum class DocumentStatus {
 };
 
 struct Document {
-    int id;
-    double relevance;
-    int rating;
+    int id = 0;
+    double relevance = 0.0;
+    int rating = 0;
+
+    Document() = default;
+
+    Document(const int doc_id, double doc_relevancy, int doc_rating)
+        : id(doc_id), relevance(doc_relevancy), rating(doc_rating)
+    {
+
+    }
 };
 
 class SearchServer {
@@ -153,6 +169,10 @@ public:
         return documents_info_.size();
     }
 
+    set<string> GetStopWords() const {
+        return stop_words_;
+    }
+
     tuple<vector<string>, DocumentStatus> MatchDocument(const string& raw_query, int document_id) const {
         set<string> matched_plus_words;
         Query query = ParseQuery(raw_query);
@@ -174,6 +194,22 @@ public:
         }
         vector<string> plus_words_vector(matched_plus_words.begin(), matched_plus_words.end());
         return {plus_words_vector, documents_info_.at(document_id).status};
+    }
+
+    SearchServer() = default;
+
+    explicit SearchServer(const string& stop_words) {
+        SetStopWords(stop_words);
+    }
+
+    template<typename T>
+    SearchServer(const T& stop_words_container) {
+        for (const string stop_word : stop_words_container) {
+            if (!stop_word.empty())
+            {
+                stop_words_.insert(stop_word);
+            }
+        }
     }
 
 private:
@@ -375,6 +411,41 @@ void TestUserPredicate() {
     ASSERT(result.at(0).id == 0 && result.at(1).id == 2);
 }
 
+void TestConstructorWithStopWordsString() {
+    {
+        SearchServer search_server("и в на"s);
+        set<string> expected_stop_words{ "и"s, "в"s, "на"s };
+        ASSERT_EQUAL(expected_stop_words, search_server.GetStopWords());
+    }
+
+    {
+        SearchServer search_server("  и в   на  "s);
+        set<string> expected_stop_words{ "и"s, "в"s, "на"s };
+        ASSERT_EQUAL(expected_stop_words, search_server.GetStopWords());
+    }
+
+    {
+        SearchServer search_server("и   в   на     "s);
+        set<string> expected_stop_words{ "и"s, "в"s, "на"s };
+        ASSERT_EQUAL(expected_stop_words, search_server.GetStopWords());
+    }
+}
+
+void TestConstructorWithStopWordsContainer() {
+    {
+        set<string> expected_stop_words{ "и"s, "в"s, "на"s };
+        SearchServer search_server(expected_stop_words);
+        ASSERT_EQUAL(expected_stop_words, search_server.GetStopWords());
+    }
+
+    {
+        vector<string> stop_words{ "и"s, "в"s, "на"s, "на"s, "и"s };
+        set<string> expected_stop_words{ "и"s, "в"s, "на"s };
+        SearchServer search_server("и в на"s);
+        ASSERT_EQUAL(expected_stop_words, search_server.GetStopWords());
+    }
+}
+
 // Функция TestSearchServer является точкой входа для запуска тестов
 void TestSearchServer() {
     RUN_TEST(TestExcludeStopWordsFromAddedDocumentContent);
@@ -385,6 +456,8 @@ void TestSearchServer() {
     RUN_TEST(TestRatingCalc);
     RUN_TEST(TestSearchByStatus);
     RUN_TEST(TestUserPredicate);
+    RUN_TEST(TestConstructorWithStopWordsString);
+    RUN_TEST(TestConstructorWithStopWordsContainer);
 }
 
 // --------- Окончание модульных тестов поисковой системы -----------
