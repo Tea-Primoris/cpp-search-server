@@ -130,6 +130,9 @@ struct Document {
 
 class SearchServer {
 public:
+
+    inline static constexpr int INVALID_DOCUMENT_ID = -1;
+
     void SetStopWords(const string& text) {
         for (const string& word : SplitIntoWords(text)) {
             stop_words_.insert(word);
@@ -171,6 +174,19 @@ public:
 
     set<string> GetStopWords() const {
         return stop_words_;
+    }
+
+    int GetDocumentId(int index) const {
+        int counter = 0;
+        for (const auto&[id, document_info] : documents_info_)
+        {
+            if (index == counter)
+            {
+                return id;
+            }
+            ++counter;
+        }
+        return INVALID_DOCUMENT_ID;
     }
 
     tuple<vector<string>, DocumentStatus> MatchDocument(const string& raw_query, int document_id) const {
