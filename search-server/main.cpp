@@ -282,6 +282,9 @@ private:
         Query query;
         for (const string& word : SplitIntoWordsNoStop(text)) {
             if (word[0] == '-') {
+                if (word.size() <= 1 || word[1] == '-') {
+                    throw invalid_argument("two minuses or nothing after minus");
+                }
                 query.minus_words.insert(word.substr(1));
             }
             else {
