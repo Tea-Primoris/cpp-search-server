@@ -311,6 +311,13 @@ private:
         }
         return matched_documents;
     }
+
+    static bool IsValidWord(const string& word) {
+        // A valid word must not contain special characters
+        return none_of(word.begin(), word.end(), [](char c) {
+            return c >= '\0' && c < ' ';
+            });
+    }
 };
 
 void PrintDocument(const Document& document) {
