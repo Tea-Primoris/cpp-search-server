@@ -132,8 +132,6 @@ struct Document {
 class SearchServer {
 public:
 
-    inline static constexpr int INVALID_DOCUMENT_ID = -1;
-
     void SetStopWords(const string& text) {
         for (const string& word : SplitIntoWords(text)) {
             if (!IsValidWord(word)) {
@@ -209,7 +207,7 @@ public:
             }
             ++counter;
         }
-        return INVALID_DOCUMENT_ID;
+        throw out_of_range("Out of range");
     }
 
     optional<tuple<vector<string>, DocumentStatus>> MatchDocument(const string& raw_query, int document_id) const {
