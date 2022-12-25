@@ -136,6 +136,9 @@ public:
 
     void SetStopWords(const string& text) {
         for (const string& word : SplitIntoWords(text)) {
+            if (!IsValidWord(word)) {
+                throw invalid_argument("Contains special symbols");
+            }
             stop_words_.insert(word);
         }
     }
