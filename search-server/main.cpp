@@ -215,8 +215,7 @@ public:
             }
         }
         vector<string> plus_words_vector(matched_plus_words.begin(), matched_plus_words.end());
-        tuple<vector<string>, DocumentStatus> return_value = { plus_words_vector, documents_info_.at(document_id).status };
-        return return_value;
+        return { plus_words_vector, documents_info_.at(document_id).status };
     }
 
     SearchServer() = default;
