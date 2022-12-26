@@ -151,6 +151,7 @@ public:
             index_[word][document_id] += tf_one_word;
         }
         documents_info_.emplace(document_id, DocumentInfo{ComputeAverageRating(ratings), status});
+        document_ids_.push_back(document_id);
     }
 
     template<typename TFilter>
@@ -183,16 +184,7 @@ public:
     }
 
     int GetDocumentId(int index) const {
-        int counter = 0;
-        for (const auto&[id, document_info] : documents_info_)
-        {
-            if (index == counter)
-            {
-                return id;
-            }
-            ++counter;
-        }
-        throw out_of_range("Out of range");
+        return document_ids_.at(index);
     }
 
     tuple<vector<string>, DocumentStatus> MatchDocument(const string& raw_query, int document_id) const {
@@ -242,6 +234,7 @@ private:
     set<string> stop_words_;
     map<string, map<int, double>> index_;
     map<int, DocumentInfo> documents_info_;
+    vector<int> document_ids_;
 
     bool IsStopWord(const string& word) const {
         return stop_words_.count(word) > 0;
