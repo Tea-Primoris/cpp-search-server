@@ -86,28 +86,6 @@ int ReadLineWithNumber() {
     return result;
 }
 
-vector<string> SplitIntoWords(const string& text) {
-    vector<string> words;
-    string word;
-    for (const char c : text) {
-        if (c == ' ') {
-            if (!word.empty()) {
-                words.push_back(word);
-                word.clear();
-            }
-        }
-        else {
-            word += c;
-        }
-    }
-
-    if (!word.empty()) {
-        words.push_back(word);
-    }
-
-    return words;
-}
-
 enum class DocumentStatus {
     ACTUAL,
     IRRELEVANT,
@@ -134,9 +112,6 @@ public:
 
     void SetStopWords(const string& text) {
         for (const string& word : SplitIntoWords(text)) {
-            if (!IsValidWord(word)) {
-                throw invalid_argument("Contains special symbols");
-            }
             stop_words_.insert(word);
         }
     }
@@ -236,18 +211,77 @@ private:
     map<int, DocumentInfo> documents_info_;
     vector<int> document_ids_;
 
+    struct WordInfo
+    {
+        string word = "";
+        bool is_plus_word = false;
+        bool is_minus_word = false;
+        bool is_stop_word = false;
+    };
+
     bool IsStopWord(const string& word) const {
         return stop_words_.count(word) > 0;
     }
 
-    vector<string> SplitIntoWordsNoStop(const string& text) const {
+    bool IsMinusWord(const string& word) const {
+        if (word.at(0) == '-') {
+            if (word.size() <= 1 || word.at(1) == '-') {
+                throw invalid_argument("two minuses or nothing after minus");
+            }
+            return true;
+        }
+        return false;
+    }
+
+    vector<string> SplitIntoWords(const string& text) const {
         vector<string> words;
-        for (const string& word : SplitIntoWords(text)) {
+        string word;
+        for (const char c : text) {
+            if (c == ' ') {
+                if (!word.empty()) {
+                    if (!IsValidWord(word)) {
+                        throw invalid_argument("Contains special symbols");
+                    }
+                    words.push_back(word);
+                    word.clear();
+                }
+            }
+            else {
+                word += c;
+            }
+        }
+
+        if (!word.empty()) {
             if (!IsValidWord(word)) {
                 throw invalid_argument("Contains special symbols");
             }
-            if (!IsStopWord(word)) {
-                words.push_back(word);
+            words.push_back(word);
+        }
+
+        return words;
+    }
+
+    vector<WordInfo> ParseWords(const string& text) const {
+        vector<WordInfo> words;
+        for (const string& word : SplitIntoWords(text)) {
+            if (IsStopWord(word)) {
+                words.push_back({ word, false, false, true });
+            }
+            else if (IsMinusWord(word)) {
+                words.push_back({ word, false, true });
+            }
+            else {
+                words.push_back({ word, true });
+            }
+        }
+        return words;
+    }
+
+    vector<string> SplitIntoWordsNoStop(const string& text) const {
+        vector<string> words;
+        for (const WordInfo& word : ParseWords(text)) {
+            if (!word.is_stop_word) {
+                words.push_back(word.word);
             }
         }
         return words;
