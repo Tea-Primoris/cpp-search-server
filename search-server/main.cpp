@@ -527,28 +527,125 @@ void TestSearchServer() {
 
 // --------- Окончание модульных тестов поисковой системы -----------
 
+template <typename Iter>
+void PrintRange(Iter range_begin, Iter range_end) {
+    for (auto it = range_begin; it != range_end; ++it) {
+        std::cout << *it;
+    }
+}
 
+template <typename It>
+class IteratorRange {
+public:
+    It begin() const {
+        return _begin;
+    }
 
+    It end() const {
+        return _end;
+    }
+
+    [[nodiscard]]
+    int size() const {
+        return distance(_begin, _end);
+    }
+
+    IteratorRange(It begin, It end) {
+        _begin = begin;
+        _end = end;
+    }
+
+private:
+    It _begin;
+    It _end;
+};
+
+template <typename It>
+ostream& operator<<(ostream& os, const IteratorRange<It>& range)
+{
+    PrintRange(range.begin(), range.end());
+    return os;
+}
+
+ostream& operator<<(ostream& os, const Document& document) {
+    os << "{ "s
+        << "document_id = "s << document.id << ", "s
+        << "relevance = "s << document.relevance << ", "s
+        << "rating = "s << document.rating
+        << " }"s;
+    return os;
+}
+
+template <typename It>
+class Paginator {
+public:
+    Paginator(It begin, It end, size_t page_size) {
+        while (distance(begin, end) > 0 && distance(begin, end) >= page_size)
+        {
+            auto range_begin = begin;
+            advance(begin, page_size);
+            auto range_end = begin;
+            _pages.push_back({ range_begin, range_end });
+        }
+        if (begin != end) _pages.push_back({ begin, end });
+    }
+
+    auto begin() const {
+        return _pages.begin();
+    }
+
+    auto end() const {
+        return _pages.end();
+    }
+
+private:
+    vector<IteratorRange<It>> _pages;
+};
+
+template <typename Container>
+auto Paginate(const Container& c, size_t page_size) {
+    return Paginator(begin(c), end(c), page_size);
+}
 int main() {
     TestSearchServer();
 
-    SearchServer search_server;
-    search_server.SetStopWords("и в на"s);
-    search_server.AddDocument(0, "белый кот и модный ошейник"s, DocumentStatus::ACTUAL, { 8, -3 });
-    search_server.AddDocument(1, "пушистый кот пушистый хвост"s, DocumentStatus::ACTUAL, { 7, 2, 7 });
-    search_server.AddDocument(2, "ухоженный пёс выразительные глаза"s, DocumentStatus::ACTUAL, { 5, -12, 2, 1 });
-    search_server.AddDocument(3, "ухоженный скворец евгений"s, DocumentStatus::BANNED, { 9 });
-    cout << "ACTUAL by default:"s << endl;
-    for (const Document& document : search_server.FindTopDocuments("пушистый ухоженный кот"s)) {
-        PrintDocument(document);
+    SearchServer search_server("and with"s);
+    search_server.AddDocument(1, "funny pet and nasty rat"s, DocumentStatus::ACTUAL, { 7, 2, 7 });
+    search_server.AddDocument(2, "funny pet with curly hair"s, DocumentStatus::ACTUAL, { 1, 2, 3 });
+    search_server.AddDocument(3, "big cat nasty hair"s, DocumentStatus::ACTUAL, { 1, 2, 8 });
+    search_server.AddDocument(4, "big dog cat Vladislav"s, DocumentStatus::ACTUAL, { 1, 3, 2 });
+    search_server.AddDocument(5, "big dog hamster Borya"s, DocumentStatus::ACTUAL, { 1, 1, 1 });
+    const auto search_results = search_server.FindTopDocuments("curly dog"s);
+    int page_size = 1;
+    const auto pages = Paginate(search_results, page_size);
+    cout << "Paginated" << endl;
+    // Выводим найденные документы по страницам
+    for (auto page = pages.begin(); page != pages.end(); ++page) {
+        cout << *page << endl;
+        cout << "Page break"s << endl;
     }
-    cout << "BANNED:"s << endl;
-    for (const Document& document : search_server.FindTopDocuments("пушистый ухоженный кот"s, DocumentStatus::BANNED)) {
-        PrintDocument(document);
-    }
-    cout << "Even ids:"s << endl;
-    for (const Document& document : search_server.FindTopDocuments("пушистый ухоженный кот"s, [](int document_id, DocumentStatus status, int rating) { return document_id % 2 == 0; })) {
-        PrintDocument(document);
-    }
-    return 0;
 }
+
+//int main() {
+//    TestSearchServer();
+//
+//    SearchServer search_server;
+//    search_server.SetStopWords("и в на"s);
+//    search_server.AddDocument(0, "белый кот и модный ошейник"s, DocumentStatus::ACTUAL, { 8, -3 });
+//    search_server.AddDocument(1, "пушистый кот пушистый хвост"s, DocumentStatus::ACTUAL, { 7, 2, 7 });
+//    search_server.AddDocument(2, "ухоженный пёс выразительные глаза"s, DocumentStatus::ACTUAL, { 5, -12, 2, 1 });
+//    search_server.AddDocument(3, "ухоженный скворец евгений"s, DocumentStatus::BANNED, { 9 });
+//    cout << "ACTUAL by default:"s << endl;
+//    for (const Document& document : search_server.FindTopDocuments("пушистый ухоженный кот"s)) {
+//        PrintDocument(document);
+//    }
+//    cout << "BANNED:"s << endl;
+//    for (const Document& document : search_server.FindTopDocuments("пушистый ухоженный кот"s, DocumentStatus::BANNED)) {
+//        PrintDocument(document);
+//    }
+//    cout << "Even ids:"s << endl;
+//    for (const Document& document : search_server.FindTopDocuments("пушистый ухоженный кот"s, [](int document_id, DocumentStatus status, int rating) { return document_id % 2 == 0; })) {
+//        PrintDocument(document);
+//    }
+//    return 0;
+//}
