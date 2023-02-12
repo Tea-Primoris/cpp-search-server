@@ -12,7 +12,7 @@ public:
     template <typename DocumentPredicate>
     std::vector<Document> AddFindRequest(const std::string& raw_query, DocumentPredicate document_predicate) {
         const auto search_results = search_server_->FindTopDocuments(raw_query, document_predicate);
-        AddToRequests(raw_query, search_results);
+        AddToRequests(raw_query, search_results.size());
         return search_results;
     }
     std::vector<Document> AddFindRequest(const std::string& raw_query, DocumentStatus status);
@@ -20,11 +20,11 @@ public:
     int GetNoResultRequests() const;
 
 private:
-    void AddToRequests(const std::string& raw_query, const std::vector<Document>& search_results);
+    void AddToRequests(const std::string& raw_query, size_t number_of_results);
 
     struct QueryResult {
         std::string raw_query;
-        std::vector<Document> search_results;
+        size_t number_of_results;
     };
 
     std::deque<QueryResult> requests_;
