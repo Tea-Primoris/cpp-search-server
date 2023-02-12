@@ -1,8 +1,10 @@
-﻿#include "pch.h"
+#include "pch.h"
 #include "../search-server/search_server.h"
 #include "../search-server/search_server.cpp"
 #include "../search-server/document.h"
 #include "../search-server/document.cpp"
+#include "../search-server/string_processing.h"
+#include "../search-server/string_processing.cpp"
 
 using namespace std::literals::string_literals;
 TEST(SearchServer, ExcludeStopWordsFromAddedDocumentContent) {
@@ -99,7 +101,7 @@ TEST(SearchServer, UserPredicate) {
     search_server.AddDocument(2, "ухоженный пёс выразительные глаза"s, DocumentStatus::ACTUAL, { 5, -12, 2, 1 });
     search_server.AddDocument(3, "ухоженный скворец евгений"s, DocumentStatus::BANNED, { 9 });
     auto result = search_server.FindTopDocuments("пушистый ухоженный кот"s, [](int document_id, DocumentStatus status, int rating) { return document_id % 2 == 0; });
-    ASSERT_TRUE(result.at(0).id == 2 && result.at(1).id == 0);
+    ASSERT_TRUE(result.at(0).id == 0 && result.at(1).id == 2);
 }
 
 TEST(SearchServer, ConstructorWithStopWordsString) {

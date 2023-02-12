@@ -9,6 +9,7 @@
 #include <cmath>
 
 #include "document.h"
+#include "string_processing.h"
 
 
 class SearchServer {
@@ -74,7 +75,6 @@ private:
 
     bool IsStopWord(const std::string& word) const;
     bool IsMinusWord(const std::string& word) const;
-    std::vector<std::string> SplitIntoWords(const std::string& text) const;
     std::vector<WordInfo> ParseWords(const std::string& text) const;
     std::vector<std::string> SplitIntoWordsNoStop(const std::string& text) const;
     static int ComputeAverageRating(const std::vector<int>& ratings);

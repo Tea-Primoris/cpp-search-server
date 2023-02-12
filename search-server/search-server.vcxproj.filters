@@ -30,6 +30,9 @@
     <ClCompile Include="search_server.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="string_processing.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="paginator.h">
@@ -45,6 +48,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="search_server.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="string_processing.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -2,6 +2,9 @@
 
 void SearchServer::SetStopWords(const std::string& text) {
     for (const std::string& word : SplitIntoWords(text)) {
+        if (!IsValidWord(word)) {
+            throw std::invalid_argument("Contains special symbols");
+        }
         stop_words_.insert(word);
     }
 }
@@ -78,37 +81,12 @@ bool SearchServer::IsMinusWord(const std::string& word) const {
     return false;
 }
 
-std::vector<std::string> SearchServer::SplitIntoWords(const std::string& text) const {
-    std::vector<std::string> words;
-    std::string word;
-    for (const char c : text) {
-        if (c == ' ') {
-            if (!word.empty()) {
-                if (!IsValidWord(word)) {
-                    throw std::invalid_argument("Contains special symbols");
-                }
-                words.push_back(word);
-                word.clear();
-            }
-        }
-        else {
-            word += c;
-        }
-    }
-
-    if (!word.empty()) {
-        if (!IsValidWord(word)) {
-            throw std::invalid_argument("Contains special symbols");
-        }
-        words.push_back(word);
-    }
-
-    return words;
-}
-
 std::vector<SearchServer::WordInfo> SearchServer::ParseWords(const std::string& text) const {
     std::vector<SearchServer::WordInfo> words;
     for (const std::string& word : SplitIntoWords(text)) {
+        if (!IsValidWord(word)) {
+            throw std::invalid_argument("Contains special symbols");
+        }
         if (IsStopWord(word)) {
             words.push_back({ word, false, false, true });
         }
