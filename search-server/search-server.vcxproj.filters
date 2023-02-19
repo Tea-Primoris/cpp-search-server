@@ -53,6 +53,9 @@
     <ClInclude Include="string_processing.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="log_duration.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="paginator.tpp">

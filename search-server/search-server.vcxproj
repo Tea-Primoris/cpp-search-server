@@ -140,6 +140,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="document.h" />
+    <ClInclude Include="log_duration.h" />
     <ClInclude Include="paginator.h" />
     <ClInclude Include="read_input_functions.h" />
     <ClInclude Include="request_queue.h" />
