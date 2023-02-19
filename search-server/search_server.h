@@ -10,6 +10,7 @@
 
 #include "document.h"
 #include "string_processing.h"
+#include "log_duration.h"
 
 
 class SearchServer {
@@ -88,6 +89,7 @@ private:
 
 template<typename TFilter>
 std::vector<Document> SearchServer::FindTopDocuments(const std::string& raw_query, TFilter filter) const {
+    LOG_DURATION_STREAM("Operation time", std::cout);
     Query query = ParseQuery(raw_query);
 
     auto matched_documents = FindAllDocuments(query, filter);

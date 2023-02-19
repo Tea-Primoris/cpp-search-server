@@ -40,6 +40,7 @@ int SearchServer::GetDocumentId(int index) const {
 }
 
 std::tuple<std::vector<std::string>, DocumentStatus> SearchServer::MatchDocument(const std::string& raw_query, int document_id) const {
+    LOG_DURATION_STREAM("Operation time", std::cout);
     Query query = ParseQuery(raw_query);
     std::set<std::string> matched_plus_words;
     bool contains_minus_word = false;
