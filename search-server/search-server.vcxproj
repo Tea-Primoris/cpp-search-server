@@ -147,11 +147,6 @@
     <ClInclude Include="search_server.h" />
     <ClInclude Include="string_processing.h" />
   </ItemGroup>
-  <ItemGroup>
-    <None Include="paginator.tpp" />
-    <None Include="request_queue.tpp" />
-    <None Include="search_server.tpp" />
-  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
