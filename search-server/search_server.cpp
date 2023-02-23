@@ -68,6 +68,19 @@ SearchServer::SearchServer(const std::string& stop_words) {
     SetStopWords(stop_words);
 }
 
+template<typename T>
+SearchServer::SearchServer(const T& stop_words_container) {
+    for (const std::string stop_word : stop_words_container) {
+        if (!stop_word.empty())
+        {
+            if (!IsValidWord(stop_word)) {
+                throw std::invalid_argument("Contains special symbols");
+            }
+            stop_words_.insert(stop_word);
+        }
+    }
+}
+
 bool SearchServer::IsStopWord(const std::string& word) const {
     return stop_words_.count(word) > 0;
 }

@@ -22,26 +22,17 @@ public:
     template<typename TFilter>
     std::vector<Document> FindTopDocuments(const std::string& raw_query, TFilter filter) const;
     std::vector<Document> FindTopDocuments(const std::string& raw_query, const DocumentStatus& status = DocumentStatus::ACTUAL) const;
+
+    std::tuple<std::vector<std::string>, DocumentStatus> MatchDocument(const std::string& raw_query, int document_id) const;
+
     int GetDocumentCount() const;
     std::set<std::string> GetStopWords() const;
     int GetDocumentId(int index) const;
-    std::tuple<std::vector<std::string>, DocumentStatus> MatchDocument(const std::string& raw_query, int document_id) const;
 
     SearchServer();
     explicit SearchServer(const std::string& stop_words);
-
     template<typename T>
-    SearchServer(const T& stop_words_container) {
-        for (const std::string stop_word : stop_words_container) {
-            if (!stop_word.empty())
-            {
-                if (!IsValidWord(stop_word)) {
-                    throw std::invalid_argument("Contains special symbols");
-                }
-                stop_words_.insert(stop_word);
-            }
-        }
-    }
+    SearchServer(const T& stop_words_container);
 
 private:
     const int MAX_RESULT_DOCUMENT_COUNT = 5;
