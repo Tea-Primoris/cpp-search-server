@@ -2,7 +2,76 @@
 #include <iostream>
 #include "search_server.h"
 #include "request_queue.h"
+#include "paginator.h"
 
+void RemoveDuplicates(SearchServer& search_server) {
+    auto CompareMapsByKey = [](const std::map<std::string, double>& map1, const std::map<std::string, double>& map2) {
+        if (map1.size() == map2.size()) {
+            for (auto [key, value] : map1) {
+                if (!map2.count(key)) {
+                    return false;
+                }
+            }
+            return true;
+        }
+        return false;
+    };
+
+    std::set<int> documents_to_delete;
+    for (auto iterator = search_server.documents_info_.begin(); iterator != search_server.documents_info_.end(); iterator = std::next(iterator)) {
+        const std::map<std::string, double>& words = iterator->second.freqs_of_words;
+        for (auto dup_iterator = std::next(iterator); dup_iterator != search_server.documents_info_.end(); dup_iterator = std::next(dup_iterator)) {
+            const std::map<std::string, double>& dup_words = dup_iterator->second.freqs_of_words;
+            if (CompareMapsByKey(words, dup_words)) {
+                int document_id = dup_iterator->first;
+                documents_to_delete.insert(document_id);
+                {
+                    using namespace std::string_literals;
+                    std::cout << "Found duplicate document id "s << document_id << std::endl;
+                }
+            }
+        }
+    }
+
+    for (int document_id : documents_to_delete) {
+        search_server.RemoveDocument(document_id);
+    }
+}
+
+int main() {
+    using namespace std;
+    SearchServer search_server("and with"s);
+
+    search_server.AddDocument(1, "funny pet and nasty rat"s, DocumentStatus::ACTUAL, { 7, 2, 7 });
+    search_server.AddDocument(2, "funny pet with curly hair"s, DocumentStatus::ACTUAL, { 1, 2 });
+
+    // дубликат документа 2, будет удалён
+    search_server.AddDocument(3, "funny pet with curly hair"s, DocumentStatus::ACTUAL, { 1, 2 });
+
+    // отличие только в стоп-словах, считаем дубликатом
+    search_server.AddDocument(4, "funny pet and curly hair"s, DocumentStatus::ACTUAL, { 1, 2 });
+
+    // множество слов такое же, считаем дубликатом документа 1
+    search_server.AddDocument(5, "funny funny pet and nasty nasty rat"s, DocumentStatus::ACTUAL, { 1, 2 });
+
+    // добавились новые слова, дубликатом не является
+    search_server.AddDocument(6, "funny pet and not very nasty rat"s, DocumentStatus::ACTUAL, { 1, 2 });
+
+    // множество слов такое же, как в id 6, несмотря на другой порядок, считаем дубликатом
+    search_server.AddDocument(7, "very nasty rat and not very funny pet"s, DocumentStatus::ACTUAL, { 1, 2 });
+
+    // есть не все слова, не является дубликатом
+    search_server.AddDocument(8, "pet with rat and rat and rat"s, DocumentStatus::ACTUAL, { 1, 2 });
+
+    // слова из разных документов, не является дубликатом
+    search_server.AddDocument(9, "nasty rat with curly hair"s, DocumentStatus::ACTUAL, { 1, 2 });
+
+    cout << "Before duplicates removed: "s << search_server.GetDocumentCount() << endl;
+    RemoveDuplicates(search_server);
+    cout << "After duplicates removed: "s << search_server.GetDocumentCount() << endl;
+}
+
+/*
 int main() {
     using namespace std::literals::string_literals;
     SearchServer search_server("and in at"s);
@@ -25,6 +94,7 @@ int main() {
     std::cout << "Total empty requests: "s << request_queue.GetNoResultRequests() << std::endl;
     return 0;
 }
+*/
 
 /*
 std::ostream& operator<<(std::ostream& os, const std::set<std::string>& set)

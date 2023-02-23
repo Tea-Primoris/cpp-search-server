@@ -16,11 +16,13 @@ void SearchServer::AddDocument(int document_id, const std::string& document, Doc
 
     const std::vector<std::string> words = SplitIntoWordsNoStop(document);
     const double tf_one_word = 1.0 / words.size();
+    std::map<std::string, double> freqs_of_words;
     for (const std::string& word : words) {
         index_[word][document_id] += tf_one_word;
+        freqs_of_words[word] += tf_one_word;
     }
-    documents_info_.emplace(document_id, DocumentInfo{ ComputeAverageRating(ratings), status });
-    document_ids_.push_back(document_id);
+    documents_info_.emplace(document_id, DocumentInfo{ ComputeAverageRating(ratings), status, freqs_of_words });
+    document_ids_.insert(document_id);
 }
 
 std::vector<Document> SearchServer::FindTopDocuments(const std::string& raw_query, const DocumentStatus& status) const {
@@ -35,12 +37,43 @@ std::set<std::string> SearchServer::GetStopWords() const {
     return stop_words_;
 }
 
-int SearchServer::GetDocumentId(int index) const {
-    return document_ids_.at(index);
+const std::map<std::string, double>& SearchServer::GetWordFrequencies(int document_id) const {
+    const std::map<std::string, double>* freqs;
+    try
+    {
+        freqs = &documents_info_.at(document_id).freqs_of_words;
+    }
+    catch (const std::out_of_range&)
+    {
+        using namespace std::string_literals;
+        std::cerr << "No such ID"s << std::endl;
+        throw;
+    }
+    return *freqs;
+}
+
+void SearchServer::RemoveDocument(int document_id) {
+    document_ids_.erase(document_id);
+    const std::map<std::string, double>* words;
+    try
+    {
+        words = &documents_info_.at(document_id).freqs_of_words;
+    }
+    catch (const std::out_of_range&)
+    {
+        using namespace std::string_literals;
+        std::cerr << "No such ID"s << std::endl;
+        return;
+    }
+    for (auto iterator = words->begin(); iterator != words->end(); iterator = std::next(iterator)) {
+        std::string word = iterator->first;
+        index_[word].erase(document_id);
+    }
+    documents_info_.erase(document_id);
 }
 
 std::tuple<std::vector<std::string>, DocumentStatus> SearchServer::MatchDocument(const std::string& raw_query, int document_id) const {
-    LOG_DURATION_STREAM("Operation time", std::cout);
+    //LOG_DURATION_STREAM("Operation time", std::cout);
     Query query = ParseQuery(raw_query);
     std::set<std::string> matched_plus_words;
     bool contains_minus_word = false;
@@ -63,22 +96,17 @@ std::tuple<std::vector<std::string>, DocumentStatus> SearchServer::MatchDocument
     return { plus_words_vector, documents_info_.at(document_id).status };
 }
 
+auto SearchServer::begin() const -> std::set<int>::const_iterator {
+    return document_ids_.begin();
+}
+
+auto SearchServer::end() const -> std::set<int>::const_iterator {
+    return document_ids_.end();
+}
+
 SearchServer::SearchServer() = default;
 SearchServer::SearchServer(const std::string& stop_words) {
     SetStopWords(stop_words);
-}
-
-template<typename T>
-SearchServer::SearchServer(const T& stop_words_container) {
-    for (const std::string stop_word : stop_words_container) {
-        if (!stop_word.empty())
-        {
-            if (!IsValidWord(stop_word)) {
-                throw std::invalid_argument("Contains special symbols");
-            }
-            stop_words_.insert(stop_word);
-        }
-    }
 }
 
 bool SearchServer::IsStopWord(const std::string& word) const {

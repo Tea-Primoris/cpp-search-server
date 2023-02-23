@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include <string>
 #include <vector>
 #include <stdexcept>
@@ -15,6 +15,12 @@
 
 class SearchServer {
 public:
+    struct DocumentInfo {
+        int rating;
+        DocumentStatus status;
+        std::map<std::string, double> freqs_of_words;
+    };
+    std::map<int, DocumentInfo> documents_info_;
 
     void SetStopWords(const std::string& text);
     void AddDocument(int document_id, const std::string& document, DocumentStatus status, const std::vector<int>& ratings);
@@ -27,7 +33,12 @@ public:
 
     int GetDocumentCount() const;
     std::set<std::string> GetStopWords() const;
-    int GetDocumentId(int index) const;
+    const std::map<std::string, double>& GetWordFrequencies(int document_id) const;
+
+    void RemoveDocument(int document_id);
+
+    auto begin() const->std::set<int>::const_iterator;
+    auto end() const->std::set<int>::const_iterator;
 
     SearchServer();
     explicit SearchServer(const std::string& stop_words);
@@ -36,11 +47,9 @@ public:
 
 private:
     const int MAX_RESULT_DOCUMENT_COUNT = 5;
-    struct DocumentInfo;
     std::set<std::string> stop_words_;
     std::map<std::string, std::map<int, double>> index_;
-    std::map<int, DocumentInfo> documents_info_;
-    std::vector<int> document_ids_;
+    std::set<int> document_ids_;
 
     struct WordInfo
     {
@@ -61,11 +70,6 @@ private:
         std::set<std::string> minus_words;
     };
 
-    struct DocumentInfo {
-        int rating;
-        DocumentStatus status;
-    };
-
     Query ParseQuery(const std::string& text) const;
     double ComputeWordInverseDocumentFreq(const std::string& word) const;
 
@@ -80,7 +84,7 @@ private:
 
 template<typename TFilter>
 std::vector<Document> SearchServer::FindTopDocuments(const std::string& raw_query, TFilter filter) const {
-    LOG_DURATION_STREAM("Operation time", std::cout);
+    //LOG_DURATION_STREAM("Operation time", std::cout);
     Query query = ParseQuery(raw_query);
 
     auto matched_documents = FindAllDocuments(query, filter);
@@ -124,4 +128,17 @@ std::vector<Document> SearchServer::FindAllDocuments(const Query& query, TFilter
         }
     }
     return matched_documents;
+}
+
+template<typename T>
+SearchServer::SearchServer(const T& stop_words_container) {
+    for (const std::string stop_word : stop_words_container) {
+        if (!stop_word.empty())
+        {
+            if (!IsValidWord(stop_word)) {
+                throw std::invalid_argument("Contains special symbols");
+            }
+            stop_words_.insert(stop_word);
+        }
+    }
 }
