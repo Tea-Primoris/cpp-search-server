@@ -19,6 +19,7 @@ public:
         int rating;
         DocumentStatus status;
         std::map<std::string, double> freqs_of_words;
+        std::set<std::string> content;
     };
     std::map<int, DocumentInfo> documents_info_;
 

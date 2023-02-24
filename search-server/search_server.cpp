@@ -17,11 +17,12 @@ void SearchServer::AddDocument(int document_id, const std::string& document, Doc
     const std::vector<std::string> words = SplitIntoWordsNoStop(document);
     const double tf_one_word = 1.0 / words.size();
     std::map<std::string, double> freqs_of_words;
+    std::set<std::string> document_words(words.begin(), words.end());
     for (const std::string& word : words) {
         index_[word][document_id] += tf_one_word;
         freqs_of_words[word] += tf_one_word;
     }
-    documents_info_.emplace(document_id, DocumentInfo{ ComputeAverageRating(ratings), status, freqs_of_words });
+    documents_info_.emplace(document_id, DocumentInfo{ ComputeAverageRating(ratings), status, freqs_of_words, document_words });
     document_ids_.insert(document_id);
 }
 
