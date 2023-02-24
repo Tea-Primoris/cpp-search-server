@@ -134,6 +134,7 @@
     <ClCompile Include="document.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="read_input_functions.cpp" />
+    <ClCompile Include="remove_duplicates.cpp" />
     <ClCompile Include="request_queue.cpp" />
     <ClCompile Include="search_server.cpp" />
     <ClCompile Include="string_processing.cpp" />
@@ -143,6 +144,7 @@
     <ClInclude Include="log_duration.h" />
     <ClInclude Include="paginator.h" />
     <ClInclude Include="read_input_functions.h" />
+    <ClInclude Include="remove_duplicates.h" />
     <ClInclude Include="request_queue.h" />
     <ClInclude Include="search_server.h" />
     <ClInclude Include="string_processing.h" />

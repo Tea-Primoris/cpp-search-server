@@ -33,6 +33,9 @@
     <ClCompile Include="string_processing.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="remove_duplicates.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="paginator.h">
@@ -54,6 +57,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="log_duration.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="remove_duplicates.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
