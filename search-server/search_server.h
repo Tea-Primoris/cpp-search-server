@@ -1,12 +1,13 @@
 ﻿#pragma once
-#include <string>
-#include <vector>
-#include <stdexcept>
-#include <set>
-#include <map>
-#include <numeric>
 #include <algorithm>
 #include <cmath>
+#include <execution>
+#include <map>
+#include <numeric>
+#include <set>
+#include <stdexcept>
+#include <string>
+#include <vector>
 
 #include "document.h"
 #include "string_processing.h"
@@ -37,6 +38,8 @@ public:
     const std::map<std::string, double>& GetWordFrequencies(int document_id) const;
 
     void RemoveDocument(int document_id);
+    void RemoveDocument(std::execution::sequenced_policy, int document_id);
+    void RemoveDocument(std::execution::parallel_policy, int document_id);
 
     auto begin() const->std::set<int>::const_iterator;
     auto end() const->std::set<int>::const_iterator;

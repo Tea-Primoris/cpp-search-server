@@ -73,6 +73,36 @@ void SearchServer::RemoveDocument(int document_id) {
     documents_info_.erase(document_id);
 }
 
+void SearchServer::RemoveDocument(std::execution::sequenced_policy, int document_id) {
+    RemoveDocument(document_id);
+}
+
+void SearchServer::RemoveDocument(std::execution::parallel_policy, int document_id) {
+    const std::set<std::string>* document_content;
+    try
+    {
+        document_content = &documents_info_.at(document_id).content;
+    }
+    catch (const std::out_of_range&)
+    {
+        using namespace std::string_literals;
+        std::cerr << "No such ID"s << std::endl;
+        return;
+    }
+
+    std::vector<const std::string*> document_words(document_content->size());
+    std::transform(std::execution::par, document_content->begin(), document_content->end(), document_words.begin(), [](const auto& item){
+        return &item;
+    });
+
+    std::for_each(std::execution::par, document_words.begin(), document_words.end(), [this, &document_id](const std::string*& word){
+        index_[*word].erase(document_id);
+    });
+
+    document_ids_.erase(document_id);
+    documents_info_.erase(document_id);
+}
+
 std::tuple<std::vector<std::string>, DocumentStatus> SearchServer::MatchDocument(const std::string& raw_query, int document_id) const {
     //LOG_DURATION_STREAM("Operation time", std::cout);
     Query query = ParseQuery(raw_query);
