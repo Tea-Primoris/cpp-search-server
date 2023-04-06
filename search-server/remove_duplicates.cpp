@@ -3,9 +3,9 @@
 void RemoveDuplicates(SearchServer& search_server) {
     std::set<int> documents_to_delete;
     for (auto iterator = search_server.documents_info_.begin(); iterator != search_server.documents_info_.end(); iterator = std::next(iterator)) {
-        const std::set<std::string>& words = iterator->second.content;
+        const std::vector<std::string>& words = iterator->second.content;
         for (auto dup_iterator = std::next(iterator); dup_iterator != search_server.documents_info_.end(); dup_iterator = std::next(dup_iterator)) {
-            const std::set<std::string>& dup_words = dup_iterator->second.content;
+            const std::vector<std::string>& dup_words = dup_iterator->second.content;
             if (words == dup_words) {
                 int document_id = dup_iterator->first;
                 documents_to_delete.insert(document_id);

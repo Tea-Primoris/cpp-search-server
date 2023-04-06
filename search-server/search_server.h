@@ -20,7 +20,7 @@ public:
         int rating;
         DocumentStatus status;
         std::map<std::string, double> freqs_of_words;
-        std::set<std::string> content;
+        std::vector<std::string> content;
     };
     std::map<int, DocumentInfo> documents_info_;
 
@@ -32,6 +32,8 @@ public:
     std::vector<Document> FindTopDocuments(const std::string& raw_query, const DocumentStatus& status = DocumentStatus::ACTUAL) const;
 
     std::tuple<std::vector<std::string>, DocumentStatus> MatchDocument(const std::string& raw_query, int document_id) const;
+    std::tuple<std::vector<std::string>, DocumentStatus> MatchDocument(std::execution::sequenced_policy, const std::string& raw_query, int document_id) const;
+    std::tuple<std::vector<std::string>, DocumentStatus> MatchDocument(std::execution::parallel_policy, const std::string& raw_query, int document_id) const;
 
     int GetDocumentCount() const;
     std::set<std::string> GetStopWords() const;
@@ -70,11 +72,13 @@ private:
     static int ComputeAverageRating(const std::vector<int>& ratings);
 
     struct Query {
-        std::set<std::string> words;
-        std::set<std::string> minus_words;
+        std::vector<std::string> plus_words;
+        std::vector<std::string> minus_words;
     };
 
     Query ParseQuery(const std::string& text) const;
+    Query ParseQuery(std::execution::parallel_policy, const std::string& text) const;
+
     double ComputeWordInverseDocumentFreq(const std::string& word) const;
 
     template<typename TFilter>
@@ -107,7 +111,7 @@ std::vector<Document> SearchServer::FindTopDocuments(const std::string& raw_quer
 template<typename TFilter>
 std::vector<Document> SearchServer::FindAllDocuments(const Query& query, TFilter filter) const {
     std::map<int, double> matched_index;
-    for (const std::string& plus_word : query.words) {
+    for (const std::string& plus_word : query.plus_words) {
         if (index_.find(plus_word) != index_.end()) {
             const double idf = ComputeWordInverseDocumentFreq(plus_word);
             for (const auto& [id, tf] : index_.at(plus_word)) {
