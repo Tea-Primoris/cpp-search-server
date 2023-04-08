@@ -9,6 +9,34 @@
 
 using namespace std::literals::string_literals;
 
+TEST_CASE("String processing", "[string processing]") {
+    SECTION("Split words in string") {
+        std::string input = "Hello everybody my name is Markiplier"s;
+        std::vector<std::string> expected = {"Hello"s, "everybody"s, "my"s, "name"s, "is"s, "Markiplier"s};
+        REQUIRE(expected == SplitIntoWords(input));
+    }
+
+    SECTION("Split words in string with extra spaces") {
+        std::string input = "   Hello      everybody     my     name         is            Markiplier        "s;
+        std::vector<std::string> expected = {"Hello"s, "everybody"s, "my"s, "name"s, "is"s, "Markiplier"s};
+        REQUIRE(expected == SplitIntoWords(input));
+    }
+
+    SECTION("Split words in string_view") {
+        std::string input_string = "Hello everybody my name is Markiplier"s;
+        std::string_view input(input_string);
+        std::vector<std::string_view> expected = {input.substr(0, 5), input.substr(6, 9), input.substr(16, 2), input.substr(19, 4), input.substr(24, 2), input.substr(27, 10)};
+        REQUIRE(expected == SplitIntoWords(input));
+    }
+
+    SECTION("Split words in string_view with extra spaces") {
+        std::string input_string = "   Hello    everybody  my      name      is    Markiplier      "s;
+        std::string_view input(input_string);
+        std::vector<std::string_view> expected = {input.substr(3, 5), input.substr(12, 9), input.substr(23, 2), input.substr(31, 4), input.substr(41, 2), input.substr(47, 10)};
+        REQUIRE(expected == SplitIntoWords(input));
+    }
+}
+
 TEST_CASE("Search server", "[search server]") {
     SECTION("Exclude stop words from added document content") {
         const int doc_id = 42;
