@@ -15,6 +15,12 @@ struct Document {
 
     Document();
     Document(const int doc_id, double doc_relevancy, int doc_rating);
+
+    bool operator==(const Document& other) const {
+        return (id == other.id)
+        && (relevance == other.relevance)
+        && (rating == other.rating);
+    }
 };
 
 void PrintDocument(const Document& document);

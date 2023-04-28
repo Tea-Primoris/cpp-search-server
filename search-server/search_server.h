@@ -12,6 +12,7 @@
 #include "document.h"
 #include "string_processing.h"
 #include "log_duration.h"
+#include "concurrent_map.h"
 
 
 class SearchServer {
@@ -32,6 +33,13 @@ public:
     template<typename TFilter>
     std::vector<Document> FindTopDocuments(const std::string_view& raw_query, TFilter filter) const;
     std::vector<Document> FindTopDocuments(const std::string_view& raw_query, const DocumentStatus& status = DocumentStatus::ACTUAL) const;
+    template<typename TFilter>
+    std::vector<Document> FindTopDocuments(std::execution::sequenced_policy, const std::string_view& raw_query, TFilter filter) const;
+    std::vector<Document> FindTopDocuments(std::execution::sequenced_policy, const std::string_view& raw_query, const DocumentStatus& status = DocumentStatus::ACTUAL) const;
+
+    template<typename TFilter>
+    std::vector<Document> FindTopDocuments(std::execution::parallel_policy, const std::string_view& raw_query, TFilter filter) const;
+    std::vector<Document> FindTopDocuments(std::execution::parallel_policy, const std::string_view& raw_query, const DocumentStatus& status = DocumentStatus::ACTUAL) const;
 
     std::tuple<std::vector<std::string_view>, DocumentStatus> MatchDocument(const std::string_view& raw_query, int document_id) const;
     std::tuple<std::vector<std::string_view>, DocumentStatus> MatchDocument(std::execution::sequenced_policy, const std::string_view& raw_query, int document_id) const;
@@ -89,6 +97,9 @@ private:
     template<typename TFilter>
     std::vector<Document> FindAllDocuments(const Query& query, TFilter filter) const;
 
+    template<typename TFilter>
+    std::vector<Document> FindAllDocuments(std::execution::parallel_policy, const Query& query, TFilter filter) const;
+
     static bool IsValidWord(const std::string_view& word);
 };
 
@@ -97,6 +108,11 @@ private:
 
 template<typename TFilter>
 std::vector<Document> SearchServer::FindTopDocuments(const std::string_view& raw_query, TFilter filter) const {
+    return FindTopDocuments(std::execution::seq, raw_query, filter);
+}
+
+template<typename TFilter>
+std::vector<Document> SearchServer::FindTopDocuments(std::execution::sequenced_policy, const std::string_view& raw_query, TFilter filter) const {
     //LOG_DURATION_STREAM("Operation time", std::cout);
     Query query = ParseQuery(raw_query);
 
@@ -104,9 +120,27 @@ std::vector<Document> SearchServer::FindTopDocuments(const std::string_view& raw
     const double EPSILON = 1e-6;
 
     sort(matched_documents.begin(), matched_documents.end(),
-        [&EPSILON](const Document& lhs, const Document& rhs) {
-            return ((std::abs(lhs.relevance - rhs.relevance) < EPSILON) && lhs.rating > rhs.rating) || (lhs.relevance > rhs.relevance);
-        });
+         [&EPSILON](const Document& lhs, const Document& rhs) {
+             return ((std::abs(lhs.relevance - rhs.relevance) < EPSILON) && lhs.rating > rhs.rating) || (lhs.relevance > rhs.relevance);
+         });
+    if (matched_documents.size() > MAX_RESULT_DOCUMENT_COUNT) {
+        matched_documents.resize(MAX_RESULT_DOCUMENT_COUNT);
+    }
+    return matched_documents;
+}
+
+template<typename TFilter>
+std::vector<Document> SearchServer::FindTopDocuments(std::execution::parallel_policy, const std::string_view& raw_query, TFilter filter) const {
+    Query query = ParseQuery(raw_query);
+
+    std::vector<Document> matched_documents = FindAllDocuments(std::execution::par, query, filter);
+    const double EPSILON = 1e-6;
+
+    std::sort(std::execution::par, matched_documents.begin(), matched_documents.end(),
+         [&EPSILON](const Document& lhs, const Document& rhs) {
+             return ((std::abs(lhs.relevance - rhs.relevance) < EPSILON) && lhs.rating > rhs.rating) || (lhs.relevance > rhs.relevance);
+         });
+
     if (matched_documents.size() > MAX_RESULT_DOCUMENT_COUNT) {
         matched_documents.resize(MAX_RESULT_DOCUMENT_COUNT);
     }
@@ -116,29 +150,69 @@ std::vector<Document> SearchServer::FindTopDocuments(const std::string_view& raw
 template<typename TFilter>
 std::vector<Document> SearchServer::FindAllDocuments(const Query& query, TFilter filter) const {
     std::map<int, double> matched_index;
-    for (const std::string_view& plus_word : query.plus_words) {
-        if (index_.find(std::string(plus_word)) != index_.end()) {
+
+    std::for_each(std::execution::seq, query.plus_words.begin(), query.plus_words.end(), [&](const std::string_view& plus_word){
+        const auto& matched_word = index_.find(std::string(plus_word));
+        if (matched_word != index_.end()) {
             const double idf = ComputeWordInverseDocumentFreq(std::string(plus_word));
             for (const auto& [id, tf] : index_.at(std::string(plus_word))) {
-                matched_index[id] += tf * idf;
+                const DocumentInfo& document_info = documents_info_.at(id);
+                if (filter(id, document_info.status, document_info.rating)) {
+                    matched_index[id] += tf * idf;
+                }
             }
         }
-    }
+    });
 
-    for (const std::string_view& minus_word : query.minus_words) {
-        if (index_.find(std::string(minus_word)) != index_.end()) {
-            for (const auto& [id, tf] : index_.at(std::string(minus_word))) {
+    std::for_each(std::execution::seq, query.minus_words.begin(), query.minus_words.end(), [&](const std::string_view& minus_word){
+        const auto& matched_word = index_.find(std::string(minus_word));
+        if (matched_word != index_.end()) {
+            for (const auto& [id, tf] : matched_word->second) {
                 matched_index.erase(id);
             }
         }
-    }
+    });
 
     std::vector<Document> matched_documents;
+    matched_documents.reserve(matched_index.size());
     for (const auto& [id, relevance] : matched_index) {
         const DocumentInfo& document_info = documents_info_.at(id);
-        if (filter(id, document_info.status, document_info.rating)) {
-            matched_documents.push_back({ id, relevance, document_info.rating });
+        matched_documents.push_back({ id, relevance, document_info.rating });
+    }
+    return matched_documents;
+}
+
+template<typename TFilter>
+std::vector<Document> SearchServer::FindAllDocuments(std::execution::parallel_policy, const Query& query, TFilter filter) const {
+    ConcurrentMap<int, double> matched_index(std::thread::hardware_concurrency());
+
+    std::for_each(std::execution::par, query.plus_words.begin(), query.plus_words.end(), [&](const std::string_view& plus_word){
+        const auto& matched_word = index_.find(std::string(plus_word));
+        if (matched_word != index_.end()) {
+            const double idf = ComputeWordInverseDocumentFreq(std::string(plus_word));
+            for (const auto& [id, tf] : index_.at(std::string(plus_word))) {
+                const DocumentInfo& document_info = documents_info_.at(id);
+                if (filter(id, document_info.status, document_info.rating)) {
+                    matched_index[id].ref_to_value += tf * idf;
+                }
+            }
         }
+    });
+
+    std::for_each(std::execution::par, query.minus_words.begin(), query.minus_words.end(), [&](const std::string_view& minus_word){
+        const auto& matched_word = index_.find(std::string(minus_word));
+        if (matched_word != index_.end()) {
+            for (const auto& [id, tf] : matched_word->second) {
+                matched_index.erase(id);
+            }
+        }
+    });
+
+    std::vector<Document> matched_documents;
+    matched_documents.reserve(matched_index.size());
+    for (const auto& [id, relevance] : matched_index.BuildOrdinaryMap()) {
+        const DocumentInfo& document_info = documents_info_.at(id);
+        matched_documents.push_back({ id, relevance, document_info.rating });
     }
     return matched_documents;
 }
