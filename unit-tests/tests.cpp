@@ -53,8 +53,7 @@ TEST_CASE("Search server", "[search server]") {
         }
 
         {
-            SearchServer server;
-            server.SetStopWords("in the"s);
+            SearchServer server("in the"s);
             server.AddDocument(doc_id, content, DocumentStatus::ACTUAL, ratings);
             REQUIRE(server.FindTopDocuments("in"s).empty());
         }
@@ -72,16 +71,14 @@ TEST_CASE("Search server", "[search server]") {
 
     SECTION("Document matching") {
         {
-            SearchServer search_server;
-            search_server.SetStopWords("и в на"s);
+            SearchServer search_server("и в на"s);
             search_server.AddDocument(0, "белый кот и модный ошейник"s, DocumentStatus::ACTUAL, { 8, -3 });
             auto [matched_words, status] = search_server.MatchDocument("модный белый кот"s, 0);
             REQUIRE(matched_words.size() == 3);
         }
 
         {
-            SearchServer search_server;
-            search_server.SetStopWords("и в на"s);
+            SearchServer search_server("и в на"s);
             search_server.AddDocument(0, "белый кот и модный ошейник"s, DocumentStatus::ACTUAL, { 8, -3 });
             auto [matched_words, status] = search_server.MatchDocument("модный белый -кот"s, 0);
             REQUIRE(matched_words.empty());
@@ -89,8 +86,7 @@ TEST_CASE("Search server", "[search server]") {
     }
 
     SECTION("Sorting by relevancy") {
-        SearchServer search_server;
-        search_server.SetStopWords("и в на"s);
+        SearchServer search_server("и в на"s);
         search_server.AddDocument(0, "белый кот и модный ошейник"s, DocumentStatus::ACTUAL, { 8, -3 });
         search_server.AddDocument(1, "пушистый кот пушистый хвост"s, DocumentStatus::ACTUAL, { 7, 2, 7 });
         search_server.AddDocument(2, "ухоженный пёс выразительные глаза"s, DocumentStatus::ACTUAL, { 5, -12, 2, 1 });
@@ -99,8 +95,7 @@ TEST_CASE("Search server", "[search server]") {
     }
 
     SECTION("Relevancy calculation") {
-        SearchServer search_server;
-        search_server.SetStopWords("и в на"s);
+        SearchServer search_server("и в на"s);
         search_server.AddDocument(1, "пушистый кот пушистый хвост"s, DocumentStatus::ACTUAL, { 7, 2, 7 });
         auto result = search_server.FindTopDocuments("пушистый ухоженный кот"s);
         constexpr double EPSILON = 1e-6;
@@ -108,16 +103,14 @@ TEST_CASE("Search server", "[search server]") {
     }
 
     SECTION("Rating calculation") {
-        SearchServer search_server;
-        search_server.SetStopWords("и в на"s);
+        SearchServer search_server("и в на"s);
         search_server.AddDocument(1, "пушистый кот пушистый хвост"s, DocumentStatus::ACTUAL, { 7, 2, 7 });
         auto result = search_server.FindTopDocuments("пушистый ухоженный кот"s);
         REQUIRE(result.at(0).rating == 5);
     }
 
     SECTION("Search by status") {
-        SearchServer search_server;
-        search_server.SetStopWords("и в на"s);
+        SearchServer search_server("и в на"s);
         search_server.AddDocument(2, "ухоженный пёс выразительные глаза"s, DocumentStatus::ACTUAL, { 5, -12, 2, 1 });
         search_server.AddDocument(3, "ухоженный скворец евгений"s, DocumentStatus::BANNED, { 9 });
         auto result = search_server.FindTopDocuments("пушистый ухоженный кот"s, DocumentStatus::BANNED);
@@ -125,8 +118,7 @@ TEST_CASE("Search server", "[search server]") {
     }
 
     SECTION("Search by predicate") {
-        SearchServer search_server;
-        search_server.SetStopWords("и в на"s);
+        SearchServer search_server("и в на"s);
         search_server.AddDocument(0, "белый кот и модный ошейник"s, DocumentStatus::ACTUAL, { 8, -3 });
         search_server.AddDocument(1, "пушистый кот пушистый хвост"s, DocumentStatus::ACTUAL, { 7, 2, 7 });
         search_server.AddDocument(2, "ухоженный пёс выразительные глаза"s, DocumentStatus::ACTUAL, { 5, -12, 2, 1 });

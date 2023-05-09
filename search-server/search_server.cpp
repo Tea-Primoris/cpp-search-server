@@ -1,18 +1,5 @@
 #include "search_server.h"
 
-void SearchServer::SetStopWords(const std::string& text) {
-    for (const std::string& word : SplitIntoWords(text)) {
-        if (!IsValidWord(word)) {
-            throw std::invalid_argument("Contains special symbols");
-        }
-        stop_words_.insert(word);
-    }
-}
-
-//void SearchServer::AddDocument(int document_id, const std::string& document, DocumentStatus status, const std::vector<int>& ratings) {
-//    AddDocument(document_id, std::string_view(document), status, ratings);
-//}
-
 void SearchServer::AddDocument(int document_id, const std::string_view& document, DocumentStatus status, const std::vector<int>& ratings) {
     using namespace std::literals::string_literals;
     if (document_id < 0) throw std::invalid_argument("Negative ID"s);
@@ -187,7 +174,12 @@ auto SearchServer::end() const -> std::set<int>::const_iterator {
 SearchServer::SearchServer() = default;
 
 SearchServer::SearchServer(const std::string& stop_words) {
-    SetStopWords(stop_words);
+    for (const std::string& word : SplitIntoWords(stop_words)) {
+        if (!IsValidWord(word)) {
+            throw std::invalid_argument("Contains special symbols");
+        }
+        stop_words_.insert(word);
+    }
 }
 
 bool SearchServer::IsStopWord(const std::string_view& word) const {
