@@ -158,7 +158,7 @@ std::tuple<std::vector<std::string_view>, DocumentStatus> SearchServer::MatchDoc
         return { std::vector<std::string_view>(), DocumentStatus::REMOVED};
     }
 
-    const bool contains_minus_words = std::any_of(std::execution::seq, query.minus_words.begin(), query.minus_words.end(), [&document_content](const std::string_view& minus_word){
+    const bool contains_minus_words = std::any_of(std::execution::par, query.minus_words.begin(), query.minus_words.end(), [&document_content](const std::string_view& minus_word){
         return std::find(document_content->begin(), document_content->end(), minus_word) != document_content->end();
     });
 
