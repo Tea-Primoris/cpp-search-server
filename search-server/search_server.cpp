@@ -182,6 +182,15 @@ SearchServer::SearchServer(const std::string& stop_words) {
     }
 }
 
+SearchServer::SearchServer(const std::string_view stop_words) {
+    for (const std::string_view word : SplitIntoWords(stop_words)) {
+        if (!IsValidWord(word)) {
+            throw std::invalid_argument("Contains special symbols");
+        }
+        stop_words_.insert(std::string(word));
+    }
+}
+
 bool SearchServer::IsStopWord(const std::string_view& word) const {
     return stop_words_.count(std::string(word));
 }

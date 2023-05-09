@@ -60,6 +60,7 @@ public:
 
     SearchServer();
     explicit SearchServer(const std::string& stop_words);
+    explicit SearchServer(const std::string_view stop_words);
     template<typename T>
     SearchServer(const T& stop_words_container);
 
