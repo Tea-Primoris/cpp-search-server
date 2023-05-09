@@ -148,7 +148,7 @@ std::tuple<std::vector<std::string_view>, DocumentStatus> SearchServer::MatchDoc
 }
 
 std::tuple<std::vector<std::string_view>, DocumentStatus> SearchServer::MatchDocument(std::execution::parallel_policy, const std::string_view& raw_query, int document_id) const {
-    Query query = ParseQuery(std::execution::par, raw_query);
+    Query query = ParseQuery(raw_query, false);
 
     const std::vector<std::string>* document_content;
     try {
@@ -240,7 +240,7 @@ int SearchServer::ComputeAverageRating(const std::vector<int>& ratings) {
     return 0;
 }
 
-SearchServer::Query SearchServer::ParseQuery(const std::string_view& text) const {
+SearchServer::Query SearchServer::ParseQuery(const std::string_view& text, bool sort_results) const {
     Query query;
     for (const std::string_view& word : SplitIntoWordsNoStop(text)) {
         if (word[0] == '-') {
@@ -254,27 +254,12 @@ SearchServer::Query SearchServer::ParseQuery(const std::string_view& text) const
         }
     }
 
-    std::sort(query.plus_words.begin(), query.plus_words.end());
-    query.plus_words.erase(std::unique(query.plus_words.begin(), query.plus_words.end()), query.plus_words.end());
+    if (sort_results) {
+        std::sort(query.plus_words.begin(), query.plus_words.end());
+        query.plus_words.erase(std::unique(query.plus_words.begin(), query.plus_words.end()), query.plus_words.end());
 
-    std::sort(query.minus_words.begin(), query.minus_words.end());
-    query.minus_words.erase(std::unique(query.minus_words.begin(), query.minus_words.end()), query.minus_words.end());
-
-    return query;
-}
-
-SearchServer::Query SearchServer::ParseQuery(std::execution::parallel_policy, const std::string_view& text) const {
-    Query query;
-    for (const std::string_view& word : SplitIntoWordsNoStop(text)) {
-        if (word[0] == '-') {
-            if (word.size() <= 1 || word[1] == '-') {
-                throw std::invalid_argument("two minuses or nothing after minus");
-            }
-            query.minus_words.push_back(word.substr(1));
-        }
-        else {
-            query.plus_words.push_back(word);
-        }
+        std::sort(query.minus_words.begin(), query.minus_words.end());
+        query.minus_words.erase(std::unique(query.minus_words.begin(), query.minus_words.end()), query.minus_words.end());
     }
 
     return query;
