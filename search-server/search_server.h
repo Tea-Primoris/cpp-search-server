@@ -27,22 +27,22 @@ public:
     void SetStopWords(const std::string& text);
 
 //    void AddDocument(int document_id, const std::string& document, DocumentStatus status, const std::vector<int>& ratings);
-    void AddDocument(int document_id, const std::string_view& document, DocumentStatus status, const std::vector<int>& ratings);
+    void AddDocument(int document_id, const std::string_view document, DocumentStatus status, const std::vector<int>& ratings);
 
     template<typename TFilter>
-    std::vector<Document> FindTopDocuments(const std::string_view& raw_query, TFilter filter) const;
-    std::vector<Document> FindTopDocuments(const std::string_view& raw_query, const DocumentStatus& status = DocumentStatus::ACTUAL) const;
+    std::vector<Document> FindTopDocuments(const std::string_view raw_query, TFilter filter) const;
+    std::vector<Document> FindTopDocuments(const std::string_view raw_query, const DocumentStatus& status = DocumentStatus::ACTUAL) const;
     template<typename TFilter>
-    std::vector<Document> FindTopDocuments(std::execution::sequenced_policy, const std::string_view& raw_query, TFilter filter) const;
-    std::vector<Document> FindTopDocuments(std::execution::sequenced_policy, const std::string_view& raw_query, const DocumentStatus& status = DocumentStatus::ACTUAL) const;
+    std::vector<Document> FindTopDocuments(std::execution::sequenced_policy, const std::string_view raw_query, TFilter filter) const;
+    std::vector<Document> FindTopDocuments(std::execution::sequenced_policy, const std::string_view raw_query, const DocumentStatus& status = DocumentStatus::ACTUAL) const;
 
     template<typename TFilter>
-    std::vector<Document> FindTopDocuments(std::execution::parallel_policy, const std::string_view& raw_query, TFilter filter) const;
-    std::vector<Document> FindTopDocuments(std::execution::parallel_policy, const std::string_view& raw_query, const DocumentStatus& status = DocumentStatus::ACTUAL) const;
+    std::vector<Document> FindTopDocuments(std::execution::parallel_policy, const std::string_view raw_query, TFilter filter) const;
+    std::vector<Document> FindTopDocuments(std::execution::parallel_policy, const std::string_view raw_query, const DocumentStatus& status = DocumentStatus::ACTUAL) const;
 
-    std::tuple<std::vector<std::string_view>, DocumentStatus> MatchDocument(const std::string_view& raw_query, int document_id) const;
-    std::tuple<std::vector<std::string_view>, DocumentStatus> MatchDocument(std::execution::sequenced_policy, const std::string_view& raw_query, int document_id) const;
-    std::tuple<std::vector<std::string_view>, DocumentStatus> MatchDocument(std::execution::parallel_policy, const std::string_view& raw_query, int document_id) const;
+    std::tuple<std::vector<std::string_view>, DocumentStatus> MatchDocument(const std::string_view raw_query, int document_id) const;
+    std::tuple<std::vector<std::string_view>, DocumentStatus> MatchDocument(std::execution::sequenced_policy, const std::string_view raw_query, int document_id) const;
+    std::tuple<std::vector<std::string_view>, DocumentStatus> MatchDocument(std::execution::parallel_policy, const std::string_view raw_query, int document_id) const;
 
     int GetDocumentCount() const;
     std::set<std::string> GetStopWords() const;
@@ -79,12 +79,12 @@ private:
         bool is_stop_word = false;
     };
 
-    bool IsStopWord(const std::string_view& word) const;
-    bool IsMinusWord(const std::string_view& word) const;
+    bool IsStopWord(const std::string_view word) const;
+    bool IsMinusWord(const std::string_view word) const;
 
-    std::vector<WordInfo> ParseWords(const std::string_view& text) const;
+    std::vector<WordInfo> ParseWords(const std::string_view text) const;
 
-    std::vector<std::string_view> SplitIntoWordsNoStop(const std::string_view& text) const;
+    std::vector<std::string_view> SplitIntoWordsNoStop(const std::string_view text) const;
 
     static int ComputeAverageRating(const std::vector<int>& ratings);
 
@@ -93,7 +93,7 @@ private:
         std::vector<std::string_view> minus_words;
     };
 
-    Query ParseQuery(const std::string_view& text, bool sort_results = true) const;
+    Query ParseQuery(const std::string_view text, bool sort_results = true) const;
 
     double ComputeWordInverseDocumentFreq(const std::string& word) const;
 
@@ -103,19 +103,19 @@ private:
     template<typename TFilter>
     std::vector<Document> FindAllDocuments(std::execution::parallel_policy, const Query& query, TFilter filter) const;
 
-    static bool IsValidWord(const std::string_view& word);
+    static bool IsValidWord(const std::string_view word);
 };
 
 
 //Def
 
 template<typename TFilter>
-std::vector<Document> SearchServer::FindTopDocuments(const std::string_view& raw_query, TFilter filter) const {
+std::vector<Document> SearchServer::FindTopDocuments(const std::string_view raw_query, TFilter filter) const {
     return FindTopDocuments(std::execution::seq, raw_query, filter);
 }
 
 template<typename TFilter>
-std::vector<Document> SearchServer::FindTopDocuments(std::execution::sequenced_policy, const std::string_view& raw_query, TFilter filter) const {
+std::vector<Document> SearchServer::FindTopDocuments(std::execution::sequenced_policy, const std::string_view raw_query, TFilter filter) const {
     //LOG_DURATION_STREAM("Operation time", std::cout);
     Query query = ParseQuery(raw_query);
 
@@ -133,7 +133,7 @@ std::vector<Document> SearchServer::FindTopDocuments(std::execution::sequenced_p
 }
 
 template<typename TFilter>
-std::vector<Document> SearchServer::FindTopDocuments(std::execution::parallel_policy, const std::string_view& raw_query, TFilter filter) const {
+std::vector<Document> SearchServer::FindTopDocuments(std::execution::parallel_policy, const std::string_view raw_query, TFilter filter) const {
     Query query = ParseQuery(raw_query);
 
     std::vector<Document> matched_documents = FindAllDocuments(std::execution::par, query, filter);
@@ -154,7 +154,7 @@ template<typename TFilter>
 std::vector<Document> SearchServer::FindAllDocuments(const Query& query, TFilter filter) const {
     std::map<int, double> matched_index;
 
-    std::for_each(std::execution::seq, query.plus_words.begin(), query.plus_words.end(), [&](const std::string_view& plus_word){
+    std::for_each(std::execution::seq, query.plus_words.begin(), query.plus_words.end(), [&](const std::string_view plus_word){
         const auto& matched_word = index_.find(std::string(plus_word));
         if (matched_word != index_.end()) {
             const double idf = ComputeWordInverseDocumentFreq(std::string(plus_word));
@@ -167,7 +167,7 @@ std::vector<Document> SearchServer::FindAllDocuments(const Query& query, TFilter
         }
     });
 
-    std::for_each(std::execution::seq, query.minus_words.begin(), query.minus_words.end(), [&](const std::string_view& minus_word){
+    std::for_each(std::execution::seq, query.minus_words.begin(), query.minus_words.end(), [&](const std::string_view minus_word){
         const auto& matched_word = index_.find(std::string(minus_word));
         if (matched_word != index_.end()) {
             for (const auto& [id, tf] : matched_word->second) {
@@ -189,7 +189,7 @@ template<typename TFilter>
 std::vector<Document> SearchServer::FindAllDocuments(std::execution::parallel_policy, const Query& query, TFilter filter) const {
     ConcurrentMap<int, double> matched_index(std::thread::hardware_concurrency());
 
-    std::for_each(std::execution::par, query.plus_words.begin(), query.plus_words.end(), [&](const std::string_view& plus_word){
+    std::for_each(std::execution::par, query.plus_words.begin(), query.plus_words.end(), [&](const std::string_view plus_word){
         const auto& matched_word = index_.find(std::string(plus_word));
         if (matched_word != index_.end()) {
             const double idf = ComputeWordInverseDocumentFreq(std::string(plus_word));
@@ -202,7 +202,7 @@ std::vector<Document> SearchServer::FindAllDocuments(std::execution::parallel_po
         }
     });
 
-    std::for_each(std::execution::par, query.minus_words.begin(), query.minus_words.end(), [&](const std::string_view& minus_word){
+    std::for_each(std::execution::par, query.minus_words.begin(), query.minus_words.end(), [&](const std::string_view minus_word){
         const auto& matched_word = index_.find(std::string(minus_word));
         if (matched_word != index_.end()) {
             for (const auto& [id, tf] : matched_word->second) {

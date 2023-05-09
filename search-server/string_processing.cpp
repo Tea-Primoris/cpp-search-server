@@ -22,7 +22,7 @@ std::vector<std::string> SplitIntoWords(const std::string& text) {
     return words;
 }
 
-std::vector<std::string_view> SplitIntoWords(const std::string_view& text) {
+std::vector<std::string_view> SplitIntoWords(const std::string_view text) {
     std::vector<std::string_view> words;
 
     auto word_begin = text.find_first_not_of(' ');
