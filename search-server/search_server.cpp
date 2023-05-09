@@ -275,3 +275,11 @@ bool SearchServer::IsValidWord(const std::string_view& word) {
         return c >= '\0' && c < ' ';
         });
 }
+
+auto SearchServer::documents_info_begin() -> std::map<int, DocumentInfo>::iterator {
+    return documents_info_.begin();
+}
+
+auto SearchServer::documents_info_end() -> std::map<int, DocumentInfo>::iterator {
+    return documents_info_.end();
+}

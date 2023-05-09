@@ -23,7 +23,6 @@ public:
         std::map<std::string, double> freqs_of_words;
         std::vector<std::string> content;
     };
-    std::map<int, DocumentInfo> documents_info_;
 
     void SetStopWords(const std::string& text);
 
@@ -56,6 +55,9 @@ public:
     auto begin() const->std::set<int>::const_iterator;
     auto end() const->std::set<int>::const_iterator;
 
+    auto documents_info_begin() -> std::map<int, DocumentInfo>::iterator;
+    auto documents_info_end() -> std::map<int, DocumentInfo>::iterator;
+
     SearchServer();
     explicit SearchServer(const std::string& stop_words);
     template<typename T>
@@ -66,6 +68,7 @@ private:
     std::set<std::string> stop_words_;
     std::map<std::string, std::map<int, double>> index_;
     std::set<int> document_ids_;
+    std::map<int, DocumentInfo> documents_info_;
 
     struct WordInfo
     {
