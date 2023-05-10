@@ -213,13 +213,13 @@ std::vector<Document> SearchServer::FindAllDocuments(std::execution::parallel_po
 
 template<typename T>
 SearchServer::SearchServer(const T& stop_words_container) {
-    for (const std::string stop_word : stop_words_container) {
+    for (const std::string_view stop_word : stop_words_container) {
         if (!stop_word.empty())
         {
             if (!IsValidWord(stop_word)) {
                 throw std::invalid_argument("Contains special symbols");
             }
-            stop_words_.insert(stop_word);
+            stop_words_.insert(std::string(stop_word));
         }
     }
 }
