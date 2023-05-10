@@ -24,21 +24,17 @@ public:
         std::vector<std::string> content;
     };
 
-    void SetStopWords(const std::string& text);
-
 //    void AddDocument(int document_id, const std::string& document, DocumentStatus status, const std::vector<int>& ratings);
     void AddDocument(int document_id, const std::string_view document, DocumentStatus status, const std::vector<int>& ratings);
 
     template<typename TFilter>
     std::vector<Document> FindTopDocuments(const std::string_view raw_query, TFilter filter) const;
     std::vector<Document> FindTopDocuments(const std::string_view raw_query, const DocumentStatus& status = DocumentStatus::ACTUAL) const;
-    template<typename TFilter>
-    std::vector<Document> FindTopDocuments(std::execution::sequenced_policy, const std::string_view raw_query, TFilter filter) const;
-    std::vector<Document> FindTopDocuments(std::execution::sequenced_policy, const std::string_view raw_query, const DocumentStatus& status = DocumentStatus::ACTUAL) const;
 
-    template<typename TFilter>
-    std::vector<Document> FindTopDocuments(std::execution::parallel_policy, const std::string_view raw_query, TFilter filter) const;
-    std::vector<Document> FindTopDocuments(std::execution::parallel_policy, const std::string_view raw_query, const DocumentStatus& status = DocumentStatus::ACTUAL) const;
+    template<typename ExecutionPolicy, typename TFilter>
+    std::vector<Document> FindTopDocuments(ExecutionPolicy policy, const std::string_view raw_query, TFilter filter) const;
+    template<typename ExecutionPolicy>
+    std::vector<Document> FindTopDocuments(ExecutionPolicy policy, const std::string_view raw_query, const DocumentStatus& status = DocumentStatus::ACTUAL) const;
 
     std::tuple<std::vector<std::string_view>, DocumentStatus> MatchDocument(const std::string_view raw_query, int document_id) const;
     std::tuple<std::vector<std::string_view>, DocumentStatus> MatchDocument(std::execution::sequenced_policy, const std::string_view raw_query, int document_id) const;
@@ -101,6 +97,9 @@ private:
     std::vector<Document> FindAllDocuments(const Query& query, TFilter filter) const;
 
     template<typename TFilter>
+    std::vector<Document> FindAllDocuments(std::execution::sequenced_policy, const Query& query, TFilter filter) const;
+
+    template<typename TFilter>
     std::vector<Document> FindAllDocuments(std::execution::parallel_policy, const Query& query, TFilter filter) const;
 
     static bool IsValidWord(const std::string_view word);
@@ -109,49 +108,41 @@ private:
 
 //Def
 
+template<typename ExecutionPolicy, typename TFilter>
+std::vector<Document> SearchServer::FindTopDocuments(ExecutionPolicy policy, const std::string_view raw_query, TFilter filter) const {
+    Query query = ParseQuery(raw_query);
+
+    std::vector<Document> matched_documents = FindAllDocuments(policy, query, filter);
+    const double EPSILON = 1e-6;
+
+    std::sort(policy, matched_documents.begin(), matched_documents.end(),
+              [&EPSILON](const Document& lhs, const Document& rhs) {
+                  return ((std::abs(lhs.relevance - rhs.relevance) < EPSILON) && lhs.rating > rhs.rating) || (lhs.relevance > rhs.relevance);
+              });
+
+    if (matched_documents.size() > MAX_RESULT_DOCUMENT_COUNT) {
+        matched_documents.resize(MAX_RESULT_DOCUMENT_COUNT);
+    }
+    return matched_documents;
+}
+
+template<typename ExecutionPolicy>
+std::vector<Document> SearchServer::FindTopDocuments(ExecutionPolicy policy, const std::string_view raw_query, const DocumentStatus& status) const {
+    return FindTopDocuments(policy, raw_query, [status](int document_id, DocumentStatus document_status, int rating) { return status == document_status; });
+}
+
 template<typename TFilter>
 std::vector<Document> SearchServer::FindTopDocuments(const std::string_view raw_query, TFilter filter) const {
     return FindTopDocuments(std::execution::seq, raw_query, filter);
 }
 
 template<typename TFilter>
-std::vector<Document> SearchServer::FindTopDocuments(std::execution::sequenced_policy, const std::string_view raw_query, TFilter filter) const {
-    //LOG_DURATION_STREAM("Operation time", std::cout);
-    Query query = ParseQuery(raw_query);
-
-    auto matched_documents = FindAllDocuments(query, filter);
-    const double EPSILON = 1e-6;
-
-    sort(matched_documents.begin(), matched_documents.end(),
-         [&EPSILON](const Document& lhs, const Document& rhs) {
-             return ((std::abs(lhs.relevance - rhs.relevance) < EPSILON) && lhs.rating > rhs.rating) || (lhs.relevance > rhs.relevance);
-         });
-    if (matched_documents.size() > MAX_RESULT_DOCUMENT_COUNT) {
-        matched_documents.resize(MAX_RESULT_DOCUMENT_COUNT);
-    }
-    return matched_documents;
-}
-
-template<typename TFilter>
-std::vector<Document> SearchServer::FindTopDocuments(std::execution::parallel_policy, const std::string_view raw_query, TFilter filter) const {
-    Query query = ParseQuery(raw_query);
-
-    std::vector<Document> matched_documents = FindAllDocuments(std::execution::par, query, filter);
-    const double EPSILON = 1e-6;
-
-    std::sort(std::execution::par, matched_documents.begin(), matched_documents.end(),
-         [&EPSILON](const Document& lhs, const Document& rhs) {
-             return ((std::abs(lhs.relevance - rhs.relevance) < EPSILON) && lhs.rating > rhs.rating) || (lhs.relevance > rhs.relevance);
-         });
-
-    if (matched_documents.size() > MAX_RESULT_DOCUMENT_COUNT) {
-        matched_documents.resize(MAX_RESULT_DOCUMENT_COUNT);
-    }
-    return matched_documents;
-}
-
-template<typename TFilter>
 std::vector<Document> SearchServer::FindAllDocuments(const Query& query, TFilter filter) const {
+    return FindAllDocuments(std::execution::seq, query, filter);
+}
+
+template<typename TFilter>
+std::vector<Document> SearchServer::FindAllDocuments(std::execution::sequenced_policy, const Query& query, TFilter filter) const {
     std::map<int, double> matched_index;
 
     std::for_each(std::execution::seq, query.plus_words.begin(), query.plus_words.end(), [&](const std::string_view plus_word){
